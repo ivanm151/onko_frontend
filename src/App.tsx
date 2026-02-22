@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Header from './components/Header';
-import HomePage from './components/HomePage';
-import ResultsPage from './components/ResultsPage';
+import HomePage from './pages/HomePage.tsx';
+import ResultsPage from './pages/ResultsPage.tsx';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<'home' | 'results'>('home');
