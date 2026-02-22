@@ -1,19 +1,44 @@
 import React, { useState } from 'react';
-import { Search, Upload, ChevronDown, ChevronUp } from 'lucide-react';
-import { searchStore } from '../stores/drugStore.ts';
+import { Search, Upload, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { searchStore } from '../stores/drugStore';
 import { observer } from 'mobx-react-lite';
 
 export default observer(function HomePage({ onSearch }: { onSearch: () => void }) {
   const [innEn, setInnEn] = useState('');
   const [dosage, setDosage] = useState(100);
   const [form, setForm] = useState('tablets');
+  const [showExcipients, setShowExcipients] = useState(false);
+  const [selectedExcipients, setSelectedExcipients] = useState<string[]>([]);
+  const [excipientMatch, setExcipientMatch] = useState(50); // Значение ползунка: 0–100%
+
+  // Пример вспомогательных веществ
+  const excipientsList = [
+    'Крахмал картофельный',
+    'Лактоза моногидрат',
+    'Магния стеарат',
+    'Натрия кроскармеллоза',
+  ];
+
+  const toggleExcipient = (excipient: string) => {
+    setSelectedExcipients((prev) =>
+        prev.includes(excipient)
+            ? prev.filter((e) => e !== excipient)
+            : [...prev, excipient]
+    );
+  };
+
+  const removeExcipient = (excipient: string) => {
+    setSelectedExcipients((prev) => prev.filter((e) => e !== excipient));
+  };
 
   const handleStartSearch = () => {
     searchStore.startSearch(
         innEn,
         '', // пока пусто
         `${dosage}mg`,
-        form
+        form,
+        selectedExcipients,
+        excipientMatch
     );
     onSearch(); // Переход на ResultsPage
   };
@@ -28,7 +53,7 @@ export default observer(function HomePage({ onSearch }: { onSearch: () => void }
         </p>
 
         {/* Search Bar */}
-        <div className="w-full relative mb-12 flex shadow-sm rounded-2xl bg-white p-2 border border-slate-200">
+        <div className="w-full relative mb-6 flex shadow-sm rounded-2xl bg-white p-2 border border-slate-200">
           <div className="flex-1 flex items-center px-4">
             <Search className="text-slate-400 mr-3" size={24} />
             <input
@@ -46,6 +71,68 @@ export default observer(function HomePage({ onSearch }: { onSearch: () => void }
           >
             {searchStore.status === 'searching' ? 'Поиск...' : 'Найти'}
           </button>
+        </div>
+
+        {/* Вспомогательные вещества */}
+        <div className="w-full mb-8 px-2">
+          <label className="block text-sm font-medium text-brand-blue mb-2">Вспомогательные вещества</label>
+          <div className="relative">
+            {/* Выбранные вещества */}
+            <div className="flex flex-wrap gap-2 p-3 min-h-12 border border-slate-200 rounded-lg bg-slate-50">
+              {selectedExcipients.length === 0 ? (
+                  <span className="text-slate-400 text-sm italic">Не выбраны</span>
+              ) : (
+                  selectedExcipients.map((exc) => (
+                      <span
+                          key={exc}
+                          className="inline-flex items-center gap-1 bg-blue-100 text-brand-blue text-xs px-3 py-1 rounded-full"
+                      >
+                  {exc}
+                        <button
+                            type="button"
+                            onClick={() => removeExcipient(exc)}
+                            className="text-brand-blue hover:text-red-600"
+                        >
+                    <X size={12} />
+                  </button>
+                </span>
+                  ))
+              )}
+            </div>
+
+            {/* Кнопка для открытия списка */}
+            <button
+                type="button"
+                onClick={() => setShowExcipients(!showExcipients)}
+                className="mt-2 text-sm text-brand-blue hover:underline"
+            >
+              {showExcipients ? 'Скрыть' : 'Выбрать из списка'}
+            </button>
+
+            {/* Список вспомогательных веществ */}
+            {showExcipients && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-slate-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {excipientsList.map((excipient) => (
+                      <div
+                          key={excipient}
+                          className="flex items-center justify-between p-3 hover:bg-slate-50 border-b border-slate-100 last:border-b-0"
+                      >
+                        <span className="text-sm text-slate-700">{excipient}</span>
+                        <button
+                            onClick={() => toggleExcipient(excipient)}
+                            className={`text-xs px-3 py-1 rounded ${
+                                selectedExcipients.includes(excipient)
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-blue-100 text-brand-blue hover:bg-blue-200'
+                            }`}
+                        >
+                          {selectedExcipients.includes(excipient) ? 'Выбрано' : 'Выбрать'}
+                        </button>
+                      </div>
+                  ))}
+                </div>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
@@ -81,6 +168,13 @@ export default observer(function HomePage({ onSearch }: { onSearch: () => void }
                   >
                     <option value="tablets">Таблетки</option>
                     <option value="capsules">Капсулы</option>
+                    <option value="aerozol">Аэрозоль</option>
+                    <option value="dust">Порошок</option>
+                    <option value="rastvor">Раствор</option>
+                    <option value="sus">Суспензия</option>
+                    <option value="maz">Мазь</option>
+                    <option value="cream">Крем</option>
+                    <option value="gel">Гель</option>
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                 </div>
@@ -119,6 +213,46 @@ export default observer(function HomePage({ onSearch }: { onSearch: () => void }
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                 </div>
+              </div>
+            </div>
+
+            {/* Совпадение состава */}
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-medium text-brand-blue">Совпадение вспомогательных веществ</label>
+                <span className="text-sm text-brand-green font-bold">{excipientMatch}%</span>
+              </div>
+              <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="10"
+                  value={excipientMatch}
+                  onChange={(e) => setExcipientMatch(Number(e.target.value))}
+                  className="w-full h-2 bg-gradient-to-r from-red-200 via-yellow-200 to-green-500 rounded-lg appearance-none cursor-pointer accent-brand-green"
+                  style={{
+                    background: `
+                  linear-gradient(
+                    to right,
+                    #fecaca 0%,
+                    #fed7aa 10%,
+                    #fde68a 20%,
+                    #fae8a5 30%,
+                    #facc15 40%,
+                    #fde047 50%,
+                    #bbf7d0 60%,
+                    #86efac 70%,
+                    #4ade80 80%,
+                    #22c55e 90%,
+                    #16a34a 100%
+                  )
+                `,
+                  }}
+              />
+              <div className="flex justify-between text-xs text-slate-400 mt-2">
+                {Array.from({ length: 11 }, (_, i) => (
+                    <span key={i}>{i * 10}</span>
+                ))}
               </div>
             </div>
 

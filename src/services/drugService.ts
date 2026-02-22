@@ -3,6 +3,8 @@ interface SearchStartRequest {
     inn_ru: string;
     dosage: string;
     form: string;
+    excipients?: string[];        // Добавлено: вспомогательные вещества
+    excipient_match?: number;     // Добавлено: важность совпадения (0–100)
 }
 
 interface SearchStartResponse {

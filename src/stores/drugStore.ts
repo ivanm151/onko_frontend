@@ -1,4 +1,4 @@
-import { searchService } from '../services/drugService.ts';
+import { searchService } from '../services/drugService';
 import { makeAutoObservable } from 'mobx';
 
 type Parameter = 'Cmax' | 'AUC' | 'T1/2' | 'CVintra';
@@ -25,6 +25,8 @@ export class SearchStore {
         params: Parameter[];
         dataString: string;
     }> = [];
+    excipients: string[] = [];
+    excipientMatch: number = 50; // по умолчанию 50%
 
     constructor() {
         makeAutoObservable(this);
@@ -50,17 +52,32 @@ export class SearchStore {
     setResult(result: any) {
         this.drugName = result.drugName;
         this.parameters = result.parameters;
-        this.articles = result.articles;
+        this.articles = result.articles.map((article: any) => ({
+            ...article,
+            params: article.params as Parameter[],
+        }));
     }
 
-    async startSearch(inn_en: string, inn_ru: string, dosage: string, form: string) {
+    async startSearch(
+        inn_en: string,
+        inn_ru: string,
+        dosage: string,
+        form: string,
+        excipients: string[] = [],
+        excipientMatch: number = 50
+    ) {
         this.setSearching();
+        this.excipients = excipients;
+        this.excipientMatch = excipientMatch;
+
         try {
             const response = await searchService.startSearch({
                 inn_en,
                 inn_ru,
                 dosage,
                 form,
+                excipients,
+                excipient_match: excipientMatch, // ← как в схеме: snake_case
             });
             this.setProjectId(response.project_id);
             this.pollStatus(response.project_id);
@@ -78,7 +95,7 @@ export class SearchStore {
                     this.setResult(response.result);
                     this.setCompleted();
                 } else {
-                    setTimeout(poll, 1000); // Опрашиваем каждую секунду
+                    setTimeout(poll, 1000);
                 }
             } catch (error) {
                 this.setFailed();
@@ -87,7 +104,10 @@ export class SearchStore {
         };
         poll();
     }
+
+    setParam(key: 'cmax' | 'auc' | 't_half' | 'cv_intra', value: number | null) {
+        this.parameters[key] = value;
+    }
 }
 
-// Единый инстанс стора
 export const searchStore = new SearchStore();
