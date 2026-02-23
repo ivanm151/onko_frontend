@@ -26,6 +26,43 @@ export default observer(function HomePage({ onSearch }: { onSearch: () => void }
     );
   };
 
+  // ... внутри HomePage ...
+
+  const handleFileUpload = (file: File) => {
+    if (!file.name.endsWith('.pdf')) {
+      alert('Поддерживаются только PDF файлы.');
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      alert('Файл слишком большой. Максимум — 50 МБ.');
+      return;
+    }
+
+    searchStore.startSearchFromPdf(file);
+    onSearch(); // Переход на ResultsPage
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  const handleBrowseClick = () => {
+    const input = document.getElementById('file-input') as HTMLInputElement;
+    input.click();
+  };
+
   const removeExcipient = (excipient: string) => {
     setSelectedExcipients((prev) => prev.filter((e) => e !== excipient));
   };
@@ -137,17 +174,33 @@ export default observer(function HomePage({ onSearch }: { onSearch: () => void }
           {/* File Upload */}
           <div className="flex flex-col">
             <h3 className="text-brand-blue font-medium mb-4 uppercase text-sm tracking-wider">Или загрузите файл с данными</h3>
-            <div className="flex-1 border-2 border-dashed border-brand-blue/30 rounded-3xl bg-white flex flex-col items-center justify-center p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer min-h-[300px]">
+            <div
+                className="flex-1 border-2 border-dashed border-brand-blue/30 rounded-3xl bg-white flex flex-col items-center justify-center p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer min-h-[300px]"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleDrop}
+            >
               <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 text-brand-blue">
                 <Upload size={32} />
               </div>
               <p className="text-xl font-medium text-slate-900 mb-2">
-                Перетащите файл сюда или{' '}
-                <span className="text-brand-blue underline decoration-brand-blue/30 underline-offset-4">выберите вручную</span>
+                Перетащите PDF сюда или{' '}
+                <span
+                    className="text-brand-blue underline decoration-brand-blue/30 underline-offset-4 cursor-pointer"
+                    onClick={handleBrowseClick}
+                >
+                выберите вручную
+            </span>
               </p>
               <p className="text-slate-500">
-                Поддерживаются: XLSX, CSV, PDF, DOCX · до 50 МБ
+                Поддерживаются: PDF · до 50 МБ
               </p>
+              <input
+                  id="file-input"
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileInputChange}
+                  className="hidden"
+              />
             </div>
           </div>
 

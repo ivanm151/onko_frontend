@@ -6,6 +6,13 @@ interface SearchStartRequest {
     additional_substances?: string[];
 }
 
+interface UploadPdfResponse {
+    project_id: string;
+    status: string;
+    message: string;
+    parameters_found: number;
+}
+
 interface SearchStartResponse {
     project_id: string;
     status: string;
@@ -140,6 +147,32 @@ export const searchService = {
                 throw error; // Для поллинга
             }
             console.error('🚨 Ошибка при скачивании:', error);
+            throw error;
+        }
+    },
+
+    async uploadPdf(file: File): Promise<UploadPdfResponse> {
+        console.log('📤 Загрузка PDF:', file.name);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(`${API_BASE}/upload/pdf`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Ошибка загрузки PDF:', response.status, errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
+            const result: UploadPdfResponse = await response.json();
+            console.log('✅ PDF обработан:', result);
+            return result;
+        } catch (error) {
+            console.error('🚨 Ошибка при загрузке PDF:', error);
             throw error;
         }
     },

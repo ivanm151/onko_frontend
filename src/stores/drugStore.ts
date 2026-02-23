@@ -253,26 +253,32 @@ export class SearchStore {
             try {
                 const response = await searchService.getProjectStatus(projectId);
 
-                // Проверяем, есть ли данные для обработки
+                // Проверяем, есть ли параметры
                 const hasParameters = Array.isArray(response.parameters) && response.parameters.length > 0;
 
-                if (response.status.toLowerCase() === 'completed' ||
-                    (response.status.toLowerCase() === 'design_failed' && hasParameters)) {
+                // Допустимые статусы для успешного завершения
+                const validStatuses = ['completed', 'design_failed', 'pdf_processed'];
 
-                    this.setResult(response); // Извлекаем данные
-                    this.setCompleted();      // ← Переходим в completed, т.к. данные есть
+                if (validStatuses.includes(response.status.toLowerCase()) && hasParameters) {
+                    this.setResult(response);
+                    this.setCompleted();
+                    return;
+                }
 
-                } else if (response.status.toLowerCase() === 'failed' || response.status.toLowerCase() === 'design_failed') {
+                // Если статус failed или design_failed без данных — ошибка
+                if (response.status.toLowerCase() === 'failed' ||
+                    (response.status.toLowerCase() === 'design_failed' && !hasParameters)) {
                     this.setFailed();
+                    return;
+                }
 
-                } else if (response.status.toLowerCase() === 'pending') {
+                // Продолжаем поллинг
+                if (response.status.toLowerCase() === 'pending') {
                     setTimeout(poll, 1000);
-
                 } else {
                     console.warn('⚠️ Неизвестный статус:', response.status);
                     setTimeout(poll, 1000);
                 }
-
             } catch (error) {
                 console.error('🚨 Ошибка при поллинге:', error);
                 this.setFailed();
@@ -292,6 +298,19 @@ export class SearchStore {
 
     setReferenceDrug(name: string) {
         this.referenceDrug = name;
+    }
+
+    async startSearchFromPdf(file: File) {
+        this.setSearching();
+
+        try {
+            const response = await searchService.uploadPdf(file);
+            this.setProjectId(response.project_id);
+            this.pollStatus(response.project_id); // ← поллим так же, как и для обычного поиска
+        } catch (error) {
+            this.setFailed();
+            console.error('PDF upload failed:', error);
+        }
     }
 }
 
