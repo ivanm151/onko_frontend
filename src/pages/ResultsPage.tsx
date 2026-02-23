@@ -201,6 +201,30 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
     );
   }
 
+  // Текст кнопки отчёта
+  const getReportButtonText = () => {
+    if (searchStore.reportStatus === 'generating') return 'Генерация...';
+    if (searchStore.reportStatus === 'ready') return 'Скачать отчёт';
+    return 'Сгенерировать синопсис';
+  };
+
+  const handleReportClick = () => {
+    if (searchStore.reportStatus === 'ready' && searchStore.reportBlob) {
+      // Скачиваем
+      const url = window.URL.createObjectURL(searchStore.reportBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${searchStore.drugName}_synopsis.docx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } else if (searchStore.reportStatus === 'idle' || searchStore.reportStatus === 'failed') {
+      // Запускаем генерацию
+      searchStore.generateReport();
+    }
+  };
+
   return (
       <div className="animate-in fade-in duration-500">
         <div className="mb-8">
@@ -216,7 +240,7 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
           </span>
           </div>
 
-          {/* Добавленные поля */}
+          {/* Поля препаратов */}
           <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
             <div>
               <label className="block text-sm font-medium text-brand-blue mb-1">Тестируемый препарат</label>
@@ -423,14 +447,6 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
                   Последовательность: <strong className="text-slate-900">A/B · B/A</strong>
                 </span>
                 </div>
-                <div className="flex gap-3">
-                  <button className="flex-1 py-2.5 border-2 border-brand-blue text-brand-blue rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm">
-                    Сгенерировать схему
-                  </button>
-                  <button className="flex-1 py-2.5 bg-brand-green text-white rounded-lg font-medium hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2 text-sm">
-                    <Download size={16} /> Скачать
-                  </button>
-                </div>
               </div>
             </section>
           </div>
@@ -444,10 +460,7 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
             </span>
             </div>
 
-            <div
-                className="flex-1 flex flex-col gap-3 mb-6 overflow-y-auto pr-2"
-                style={{ maxHeight: '800px' }}
-            >
+            <div className="flex-1 flex flex-col gap-3 mb-6 overflow-y-auto pr-2" style={{ maxHeight: '800px' }}>
               {searchStore.articles.map((article) => {
                 const visible = isArticleVisible(article);
                 return (
@@ -480,9 +493,7 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
                       </span>
                         ))}
                       </div>
-                      <p className="text-xs text-slate-600 mt-3 pt-3 border-t border-slate-100">
-                        {article.dataString}
-                      </p>
+                      <p className="text-xs text-slate-600 mt-3 pt-3 border-t border-slate-100">{article.dataString}</p>
                     </div>
                 );
               })}
@@ -492,9 +503,26 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
               <p className="text-slate-500 text-xs text-right mb-2">
                 На основе данных из {searchStore.articles.length} источников
               </p>
-              <button className="w-full h-16 bg-brand-blue hover:bg-[#153E75] text-white rounded-2xl font-bold text-lg tracking-wide shadow-[0_4px_10px_rgba(30,58,138,0.2)] transition-all flex items-center justify-center gap-3 uppercase">
-                <FileText size={24} />
-                Сгенерировать синопсис
+
+              {/* Единая кнопка для генерации и скачивания */}
+              <button
+                  onClick={handleReportClick}
+                  disabled={searchStore.reportStatus === 'generating'}
+                  className={`w-full h-16 font-bold text-lg tracking-wide shadow-[0_4px_10px_rgba(30,58,138,0.2)] transition-all flex items-center justify-center gap-3 uppercase
+                ${
+                      searchStore.reportStatus === 'ready'
+                          ? 'bg-brand-green hover:bg-emerald-600 text-white'
+                          : 'bg-brand-blue hover:bg-[#153E75] text-white'
+                  }
+                ${searchStore.reportStatus === 'generating' ? 'opacity-70 cursor-not-allowed' : ''}
+              `}
+              >
+                {searchStore.reportStatus === 'ready' ? (
+                    <Download size={24} />
+                ) : (
+                    <FileText size={24} />
+                )}
+                {getReportButtonText()}
               </button>
             </div>
           </div>

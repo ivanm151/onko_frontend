@@ -6,9 +6,12 @@ type Parameter = 'Cmax' | 'AUC' | 'T1/2' | 'CVintra';
 export class SearchStore {
     project_id: string | null = null;
     status: 'idle' | 'searching' | 'completed' | 'failed' = 'idle';
-    drugName: string = ''; // ← изначальное найденное название (референт)
-    testDrug: string = ''; // ← тестируемый препарат
-    referenceDrug: string = ''; // ← референтный препарат
+    drugName: string = '';
+    testDrug: string = '';
+    referenceDrug: string = '';
+
+    reportStatus: 'idle' | 'generating' | 'ready' | 'failed' = 'idle';
+    reportBlob: Blob | null = null;
 
     parameters: {
         cmax: number | null;
@@ -54,16 +57,152 @@ export class SearchStore {
         this.project_id = id;
     }
 
-    setResult(result: any) {
-        this.drugName = result.drugName;
-        this.parameters = result.parameters;
-        this.articles = result.articles.map((article: any) => ({
-            ...article,
-            params: article.params as Parameter[],
-        }));
-        // Устанавливаем значения по умолчанию: референт = найденный препарат
+    setGenerating() {
+        this.reportStatus = 'generating';
+        this.reportBlob = null;
+    }
+
+    setReportReady(blob: Blob) {
+        this.reportStatus = 'ready';
+        this.reportBlob = blob;
+    }
+
+    setReportFailed() {
+        this.reportStatus = 'failed';
+    }
+
+    async generateReport() {
+        if (!this.project_id) return;
+
+        this.setGenerating();
+
+        try {
+            await searchService.generateReport(this.project_id);
+
+            // Начинаем polling скачивания
+            this.pollDownloadReport(this.project_id);
+        } catch (error) {
+            this.setReportFailed();
+            console.error('Failed to start report generation:', error);
+        }
+    }
+
+    async pollDownloadReport(projectId: string) {
+        const MAX_RETRIES = 30;
+        let attempts = 0;
+
+        const poll = async () => {
+            attempts++;
+            console.log(`🔁 Polling download attempt ${attempts}/${MAX_RETRIES}`);
+
+            if (attempts > MAX_RETRIES) {
+                this.setReportFailed();
+                console.error('🛑 Report download polling timed out');
+                return;
+            }
+
+            try {
+                const blob = await searchService.downloadReport(projectId);
+                this.setReportReady(blob);
+
+                // Автоматически скачиваем
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${this.drugName}_synopsis.docx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error: any) {
+                if (error.message === 'not_ready') {
+                    setTimeout(poll, 1000);
+                } else {
+                    this.setReportFailed();
+                }
+            }
+        };
+
+        poll();
+    }
+
+    setResult(data: any) {
+        // Устанавливаем имя препарата, если ещё не установлено
+        if (!this.drugName && data.inn_en) {
+            this.drugName = data.inn_en;
+        } else {
+            this.drugName = this.drugName || 'Неизвестный препарат';
+        }
+
+        // Очищаем параметры
+        const newParameters = {
+            cmax: null as number | null,
+            auc: null as number | null,
+            t_half: null as number | null,
+            cv_intra: null as number | null,
+        };
+
+        // Маппинг параметров
+        const paramKeyMap: Record<string, keyof typeof newParameters> = {
+            cmax: 'cmax',
+            auc: 'auc',
+            't½': 't_half',
+            't1/2': 't_half',
+            't_half': 't_half',
+            'cv_intra': 'cv_intra',
+            'cv': 'cv_intra',
+            'cvintra': 'cv_intra',
+        };
+
+        // Собираем статьи и усреднённые значения
+        const articles: Array<{
+            id: string;
+            authors: string;
+            journal: string;
+            params: Parameter[];
+            dataString: string;
+        }> = [];
+
+        data.parameters?.forEach((p: any, i: number) => {
+            const key = p.parameter.toLowerCase();
+            const value = parseFloat(p.value);
+            const mappedKey = paramKeyMap[key];
+
+            if (mappedKey && !isNaN(value)) {
+                // Обновляем параметр, если это первый попавшийся или более надёжный
+                if (newParameters[mappedKey] === null || p.is_reliable) {
+                    newParameters[mappedKey] = value;
+                }
+            }
+
+            // Создаём статью
+            const paramShort = key === 'cmax' ? 'Cmax' :
+                key === 'auc' ? 'AUC' :
+                    key === 't½' || key === 't1/2' || key === 't_half' ? 'T1/2' :
+                        key === 'cv_intra' || key === 'cvintra' || key === 'cv' ? 'CVintra' : null;
+
+            if (!paramShort) return;
+
+            articles.push({
+                id: String(i + 1),
+                authors: p.source || 'Источник',
+                journal: 'Клиническое исследование',
+                params: [paramShort as Parameter],
+                dataString: `${p.parameter} ${p.value} ${p.unit}`,
+            });
+        });
+
+        // Устанавливаем CVintra по умолчанию, если не найдено
+        newParameters.cv_intra = newParameters.cv_intra ?? 25;
+
+        this.parameters = newParameters;
+        this.articles = articles;
+
+        // Устанавливаем препараты
         if (!this.referenceDrug) this.referenceDrug = this.drugName;
         if (!this.testDrug) this.testDrug = this.drugName;
+
+        console.log('✅ Данные успешно установлены:', this);
     }
 
     async startSearch(
@@ -77,6 +216,7 @@ export class SearchStore {
         this.setSearching();
         this.excipients = excipients;
         this.excipientMatch = excipientMatch;
+        this.drugName = inn_en;
 
         try {
             const response = await searchService.startSearch({
@@ -96,20 +236,40 @@ export class SearchStore {
     }
 
     async pollStatus(projectId: string) {
+        const MAX_RETRIES = 60; // 60 секунд максимум
+        let attempts = 0;
+
         const poll = async () => {
+            attempts++;
+            console.log(`🔁 Polling attempt ${attempts}/${MAX_RETRIES}, status: ${this.status}`);
+
+            if (attempts > MAX_RETRIES) {
+                this.setFailed();
+                console.error('🛑 Polling stopped: timeout after 60 seconds');
+                return;
+            }
+
             try {
                 const response = await searchService.getProjectStatus(projectId);
-                if (response.status === 'COMPLETED') {
-                    this.setResult(response.result);
+
+                if (response.status.toLowerCase() === 'completed') {
+                    this.setResult(response);
                     this.setCompleted();
+                } else if (response.status.toLowerCase() === 'failed') {
+                    this.setFailed();
+                } else if (response.status.toLowerCase() === 'pending') {
+                    setTimeout(poll, 1000);
                 } else {
+                    console.warn('⚠️ Неизвестный статус:', response.status);
                     setTimeout(poll, 1000);
                 }
+
             } catch (error) {
+                console.error('🚨 Ошибка при поллинге:', error);
                 this.setFailed();
-                console.error('Polling failed:', error);
             }
         };
+
         poll();
     }
 
@@ -117,7 +277,6 @@ export class SearchStore {
         this.parameters[key] = value;
     }
 
-    // Методы для изменения препаратов
     setTestDrug(name: string) {
         this.testDrug = name;
     }
