@@ -34,7 +34,8 @@ export class SearchStore {
     }> = [];
 
     excipients: string[] = [];
-    excipientMatch: number = 50;
+    dosage: string = '';
+    form: string = '';
 
     constructor() {
         makeAutoObservable(this);
@@ -205,27 +206,27 @@ export class SearchStore {
         console.log('✅ Данные успешно установлены:', this);
     }
 
+    // Обновлённый метод: убран excipientMatch
     async startSearch(
         inn_en: string,
         inn_ru: string,
         dosage: string,
         form: string,
-        excipients: string[] = [],
-        excipientMatch: number = 50
+        excipients: string[] = []
     ) {
         this.setSearching();
         this.excipients = excipients;
-        this.excipientMatch = excipientMatch;
+        this.dosage = dosage;   // ← сохраняем
+        this.form = form;       // ← сохраняем
         this.drugName = inn_en;
 
         try {
             const response = await searchService.startSearch({
                 inn_en,
-                inn_ru,
+                inn_ru: inn_en,
                 dosage,
                 form,
-                excipients,
-                excipient_match: excipientMatch,
+                additional_substances: excipients, // ← ключевой момент
             });
             this.setProjectId(response.project_id);
             this.pollStatus(response.project_id);
@@ -236,7 +237,7 @@ export class SearchStore {
     }
 
     async pollStatus(projectId: string) {
-        const MAX_RETRIES = 60; // 60 секунд максимум
+        const MAX_RETRIES = 60;
         let attempts = 0;
 
         const poll = async () => {
@@ -252,13 +253,21 @@ export class SearchStore {
             try {
                 const response = await searchService.getProjectStatus(projectId);
 
-                if (response.status.toLowerCase() === 'completed') {
-                    this.setResult(response);
-                    this.setCompleted();
-                } else if (response.status.toLowerCase() === 'failed') {
+                // Проверяем, есть ли данные для обработки
+                const hasParameters = Array.isArray(response.parameters) && response.parameters.length > 0;
+
+                if (response.status.toLowerCase() === 'completed' ||
+                    (response.status.toLowerCase() === 'design_failed' && hasParameters)) {
+
+                    this.setResult(response); // Извлекаем данные
+                    this.setCompleted();      // ← Переходим в completed, т.к. данные есть
+
+                } else if (response.status.toLowerCase() === 'failed' || response.status.toLowerCase() === 'design_failed') {
                     this.setFailed();
+
                 } else if (response.status.toLowerCase() === 'pending') {
                     setTimeout(poll, 1000);
+
                 } else {
                     console.warn('⚠️ Неизвестный статус:', response.status);
                     setTimeout(poll, 1000);

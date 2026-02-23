@@ -3,8 +3,7 @@ interface SearchStartRequest {
     inn_ru: string;
     dosage: string;
     form: string;
-    excipients?: string[];
-    excipient_match?: number;
+    additional_substances?: string[];
 }
 
 interface SearchStartResponse {

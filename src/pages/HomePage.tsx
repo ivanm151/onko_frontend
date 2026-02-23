@@ -13,10 +13,9 @@ export default observer(function HomePage({ onSearch }: { onSearch: () => void }
 
   // Пример вспомогательных веществ
   const excipientsList = [
-    'Крахмал картофельный',
-    'Лактоза моногидрат',
-    'Магния стеарат',
-    'Натрия кроскармеллоза',
+    'aspirin',
+    'paracetamol',
+    'ibuprofen',
   ];
 
   const toggleExcipient = (excipient: string) => {
@@ -33,14 +32,13 @@ export default observer(function HomePage({ onSearch }: { onSearch: () => void }
 
   const handleStartSearch = () => {
     searchStore.startSearch(
-        innEn,
-        '', // пока пусто
-        `${dosage}mg`,
-        form,
-        selectedExcipients,
-        excipientMatch
+        innEn,                    // → inn_en
+        '',                       // → inn_ru (не используется, но можно оставить пустым или удалить)
+        `${dosage}mg`,            // → dosage (число + "mg")
+        form,                     // → form (строка: 'tablets', 'capsules' и т.д.)
+        selectedExcipients        // → additional_substances
     );
-    onSearch(); // Переход на ResultsPage
+    onSearch();
   };
 
   return (
