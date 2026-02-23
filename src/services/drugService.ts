@@ -99,27 +99,44 @@ export const searchService = {
 
     async generateReport(projectId: string): Promise<GenerateReportResponse> {
         console.log('📄 Генерация отчёта для:', projectId);
-        try {
-            const response = await fetch(`${API_BASE}/reports/${projectId}/generate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ Ошибка генерации отчёта:', response.status, errorText);
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
-            }
+        // Сначала проверим статус проекта
+        const statusResponse = await fetch(`${API_BASE}/search/results/${projectId}`, {
+            method: 'GET',
+        });
 
-            const result: GenerateReportResponse = await response.json();
-            console.log('✅ Отчёт начат:', result);
-            return result;
-        } catch (error) {
-            console.error('🚨 Ошибка при генерации отчёта:', error);
-            throw error;
+        if (!statusResponse.ok) {
+            throw new Error(`HTTP ${statusResponse.status}: Не удалось получить статус`);
         }
+
+        const statusData: ProjectStatusResponse = await statusResponse.json();
+        const validStatuses = ['completed', 'design_failed', 'pdf_processed'];
+
+        if (!validStatuses.includes(statusData.status.toLowerCase())) {
+            throw new Error(`Project not ready. Current status: ${statusData.status}`);
+        }
+
+        if (statusData.status.toLowerCase() === 'pdf_processed' && (!statusData.parameters || statusData.parameters.length === 0)) {
+            throw new Error('Project has no parameters to generate report.');
+        }
+
+        // Теперь отправляем запрос на генерацию
+        const response = await fetch(`${API_BASE}/reports/${projectId}/generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Ошибка генерации отчёта:', response.status, errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        const result: GenerateReportResponse = await response.json();
+        console.log('✅ Отчёт начат:', result);
+        return result;
     },
 
     async downloadReport(projectId: string): Promise<Blob> {

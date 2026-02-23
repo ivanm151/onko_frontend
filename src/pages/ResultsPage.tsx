@@ -227,49 +227,67 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
 
   return (
       <div className="animate-in fade-in duration-500">
-        <div className="mb-8">
-          <button onClick={onBack} className="text-brand-blue hover:underline mb-4 text-sm font-medium">
-            &larr; Назад к поиску
-          </button>
-          <div className="flex items-center gap-4">
-            <h1 className="text-4xl font-serif text-brand-blue">
-              Результаты поиска: {searchStore.drugName}
-            </h1>
-            <span className="bg-blue-100 text-brand-blue text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">
-            Готово
-          </span>
-          </div>
 
-          {/* Поля препаратов */}
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
-            <div>
-              <label className="block text-sm font-medium text-brand-blue mb-1">Тестируемый препарат</label>
-              <input
-                  type="text"
-                  value={testDrug}
-                  onChange={(e) => setTestDrug(e.target.value)}
-                  onBlur={() => searchStore.setTestDrug(testDrug)}
-                  onKeyDown={(e) => e.key === 'Enter' && searchStore.setTestDrug(testDrug)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-brand-blue mb-1">Референтный препарат</label>
-              <input
-                  type="text"
-                  value={referenceDrug}
-                  onChange={(e) => setReferenceDrug(e.target.value)}
-                  onBlur={() => searchStore.setReferenceDrug(referenceDrug)}
-                  onKeyDown={(e) => e.key === 'Enter' && searchStore.setReferenceDrug(referenceDrug)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
-              />
-            </div>
-          </div>
-
-          <p className="text-slate-500 mt-2">
-            Агрегированные данные из {searchStore.articles.length} источников · Обновлено сегодня
-          </p>
+        {/* Заголовок */}
+        <div className="flex items-center gap-4">
+          <h1 className="text-4xl font-serif text-brand-blue">
+            Результаты поиска: {searchStore.drugName}
+          </h1>
+          <span className="bg-blue-100 text-brand-blue text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">
+        Готово
+    </span>
         </div>
+
+        <p className="text-slate-500 mt-2">
+          Агрегированные данные из {searchStore.articles.length} источников · Обновлено сегодня
+        </p>
+
+        {/* Три колонки: Тестовый, Референтный, Дизайн — в ряд на больших экранах */}
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl">
+          {/* Тестируемый препарат */}
+          <div>
+            <label className="block text-sm font-medium text-brand-blue mb-1">Тестируемый препарат</label>
+            <input
+                type="text"
+                value={testDrug}
+                onChange={(e) => setTestDrug(e.target.value)}
+                onBlur={() => searchStore.setTestDrug(testDrug)}
+                onKeyDown={(e) => e.key === 'Enter' && searchStore.setTestDrug(testDrug)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+            />
+          </div>
+
+          {/* Референтный препарат */}
+          <div>
+            <label className="block text-sm font-medium text-brand-blue mb-1">Референтный препарат</label>
+            <input
+                type="text"
+                value={referenceDrug}
+                onChange={(e) => setReferenceDrug(e.target.value)}
+                onBlur={() => searchStore.setReferenceDrug(referenceDrug)}
+                onKeyDown={(e) => e.key === 'Enter' && searchStore.setReferenceDrug(referenceDrug)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+            />
+          </div>
+
+          {/* Рекомендуемый дизайн — теперь в той же сетке */}
+          <div>
+            <section className="bg-green-50 border border-green-200 rounded-2xl p-5 shadow-md h-full flex flex-col justify-between">
+              <div>
+                <h2 className="text-green-800 font-medium text-sm uppercase tracking-wider mb-1">Рекомендуемый дизайн</h2>
+                <h3 className="text-2xl font-serif text-green-900 mb-3">2×2 кроссовер</h3>
+                <p className="text-green-700 text-sm leading-relaxed mb-4">
+                  Низкая вариабельность (CV &lt; 30%) позволяет использовать классический двухпериодный кроссовер.
+                  Рекомендован EMA Guideline on the Investigation of Bioequivalence (2010).
+                </p>
+              </div>
+              <button className="text-green-700 font-medium text-sm hover:underline flex items-center gap-1">
+                Подробнее о дизайне &rarr;
+              </button>
+            </section>
+          </div>
+        </div>
+
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* LEFT COLUMN */}
@@ -356,6 +374,7 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
             </section>
           </div>
 
+
           {/* CENTRAL COLUMN */}
           <div className="flex flex-col gap-8">
             <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
@@ -423,21 +442,6 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
               </div>
             </section>
 
-            {/* Рекомендуемый дизайн */}
-            <section>
-              <h2 className="text-brand-blue font-medium text-lg mb-4">Рекомендуемый дизайн</h2>
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-                <h3 className="text-2xl font-serif text-brand-blue mb-3">2×2 кроссовер</h3>
-                <p className="text-slate-600 text-sm leading-relaxed mb-4">
-                  Низкая вариабельность (CV &lt; 30%) позволяет использовать классический двухпериодный кроссовер.
-                  Рекомендован EMA Guideline on the Investigation of Bioequivalence (2010).
-                </p>
-                <button className="text-brand-blue font-medium text-sm hover:underline flex items-center gap-1">
-                  Подробнее о дизайне &rarr;
-                </button>
-              </div>
-            </section>
-
             {/* Схема рандомизации */}
             <section>
               <h2 className="text-brand-blue font-medium text-lg mb-4">Схема рандомизации</h2>
@@ -452,6 +456,7 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
           </div>
 
           {/* RIGHT COLUMN */}
+
           <div className="flex flex-col h-full">
             <div className="flex justify-between items-end mb-4">
               <h2 className="text-brand-blue font-medium text-lg">Все источники</h2>

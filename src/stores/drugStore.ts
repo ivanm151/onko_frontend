@@ -75,12 +75,27 @@ export class SearchStore {
     async generateReport() {
         if (!this.project_id) return;
 
+        // Проверяем, можно ли генерировать
+        try {
+            const response = await searchService.getProjectStatus(this.project_id);
+            const hasParameters = Array.isArray(response.parameters) && response.parameters.length > 0;
+            const validStatuses = ['completed', 'design_failed', 'pdf_processed'];
+
+            if (!validStatuses.includes(response.status.toLowerCase()) || !hasParameters) {
+                this.setReportFailed();
+                console.error('🛑 Нельзя генерировать отчёт: данные недоступны');
+                return;
+            }
+        } catch (error) {
+            this.setReportFailed();
+            console.error('🚨 Не удалось проверить статус перед генерацией:', error);
+            return;
+        }
+
         this.setGenerating();
 
         try {
             await searchService.generateReport(this.project_id);
-
-            // Начинаем polling скачивания
             this.pollDownloadReport(this.project_id);
         } catch (error) {
             this.setReportFailed();
