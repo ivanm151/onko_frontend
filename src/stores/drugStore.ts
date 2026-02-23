@@ -6,7 +6,10 @@ type Parameter = 'Cmax' | 'AUC' | 'T1/2' | 'CVintra';
 export class SearchStore {
     project_id: string | null = null;
     status: 'idle' | 'searching' | 'completed' | 'failed' = 'idle';
-    drugName: string = '';
+    drugName: string = ''; // ← изначальное найденное название (референт)
+    testDrug: string = ''; // ← тестируемый препарат
+    referenceDrug: string = ''; // ← референтный препарат
+
     parameters: {
         cmax: number | null;
         auc: number | null;
@@ -18,6 +21,7 @@ export class SearchStore {
         t_half: null,
         cv_intra: null,
     };
+
     articles: Array<{
         id: string;
         authors: string;
@@ -25,8 +29,9 @@ export class SearchStore {
         params: Parameter[];
         dataString: string;
     }> = [];
+
     excipients: string[] = [];
-    excipientMatch: number = 50; // по умолчанию 50%
+    excipientMatch: number = 50;
 
     constructor() {
         makeAutoObservable(this);
@@ -56,6 +61,9 @@ export class SearchStore {
             ...article,
             params: article.params as Parameter[],
         }));
+        // Устанавливаем значения по умолчанию: референт = найденный препарат
+        if (!this.referenceDrug) this.referenceDrug = this.drugName;
+        if (!this.testDrug) this.testDrug = this.drugName;
     }
 
     async startSearch(
@@ -77,7 +85,7 @@ export class SearchStore {
                 dosage,
                 form,
                 excipients,
-                excipient_match: excipientMatch, // ← как в схеме: snake_case
+                excipient_match: excipientMatch,
             });
             this.setProjectId(response.project_id);
             this.pollStatus(response.project_id);
@@ -107,6 +115,15 @@ export class SearchStore {
 
     setParam(key: 'cmax' | 'auc' | 't_half' | 'cv_intra', value: number | null) {
         this.parameters[key] = value;
+    }
+
+    // Методы для изменения препаратов
+    setTestDrug(name: string) {
+        this.testDrug = name;
+    }
+
+    setReferenceDrug(name: string) {
+        this.referenceDrug = name;
     }
 }
 

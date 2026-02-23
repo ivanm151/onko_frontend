@@ -142,21 +142,32 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
   const [tHalf, setTHalf] = useState<number | null>(searchStore.parameters.t_half);
   const [cvIntra, setCvIntra] = useState<number>(searchStore.parameters.cv_intra || 25);
 
-  const [delta, setDelta] = useState<number>(20); // Ожидаемая разница
-  const [power, setPower] = useState<number>(80); // Мощность
-  const [alpha, setAlpha] = useState<number>(0.05); // Уровень значимости
+  const [delta, setDelta] = useState<number>(20);
+  const [power, setPower] = useState<number>(80);
+  const [alpha, setAlpha] = useState<number>(0.05);
 
-  // Синхронизация с стором при изменении
+  const [testDrug, setTestDrug] = useState(searchStore.testDrug);
+  const [referenceDrug, setReferenceDrug] = useState(searchStore.referenceDrug);
+
   useEffect(() => {
     setCmax(searchStore.parameters.cmax);
     setAuc(searchStore.parameters.auc);
     setTHalf(searchStore.parameters.t_half);
     setCvIntra(searchStore.parameters.cv_intra || 25);
+
+    if (!searchStore.testDrug) searchStore.setTestDrug(searchStore.drugName);
+    if (!searchStore.referenceDrug) searchStore.setReferenceDrug(searchStore.drugName);
+
+    setTestDrug(searchStore.testDrug);
+    setReferenceDrug(searchStore.referenceDrug);
   }, [
     searchStore.parameters.cmax,
     searchStore.parameters.auc,
     searchStore.parameters.t_half,
     searchStore.parameters.cv_intra,
+    searchStore.drugName,
+    searchStore.testDrug,
+    searchStore.referenceDrug,
   ]);
 
   const toggleParam = (param: Parameter) => {
@@ -170,12 +181,10 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
     return selectedParams.every((param) => article.params.includes(param));
   };
 
-  // Base calculation logic
-  const baseVolume = 30; // Можно вычислять по формуле позже
+  const baseVolume = 30;
   const withDropout = Math.ceil(baseVolume / (1 - dropoutRate / 100));
   const withScreenFail = Math.ceil(withDropout / (1 - screenFail / 100));
 
-  // Ждём завершения поиска
   if (searchStore.status === 'idle' || searchStore.status === 'searching') {
     return (
         <div className="text-center py-20">
@@ -206,6 +215,33 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
             Готово
           </span>
           </div>
+
+          {/* Добавленные поля */}
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
+            <div>
+              <label className="block text-sm font-medium text-brand-blue mb-1">Тестируемый препарат</label>
+              <input
+                  type="text"
+                  value={testDrug}
+                  onChange={(e) => setTestDrug(e.target.value)}
+                  onBlur={() => searchStore.setTestDrug(testDrug)}
+                  onKeyDown={(e) => e.key === 'Enter' && searchStore.setTestDrug(testDrug)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-brand-blue mb-1">Референтный препарат</label>
+              <input
+                  type="text"
+                  value={referenceDrug}
+                  onChange={(e) => setReferenceDrug(e.target.value)}
+                  onBlur={() => searchStore.setReferenceDrug(referenceDrug)}
+                  onKeyDown={(e) => e.key === 'Enter' && searchStore.setReferenceDrug(referenceDrug)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+              />
+            </div>
+          </div>
+
           <p className="text-slate-500 mt-2">
             Агрегированные данные из {searchStore.articles.length} источников · Обновлено сегодня
           </p>
@@ -225,7 +261,7 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
                     onChange={(val) => {
                       const parsed = parseFloat(val);
                       setCmax(isNaN(parsed) ? null : parsed);
-                      searchStore.setParam('cmax', isNaN(parsed) ? null : parsed); // Сохраняем в стор
+                      searchStore.setParam('cmax', isNaN(parsed) ? null : parsed);
                     }}
                     onClick={() => toggleParam('Cmax')}
                 />
@@ -302,24 +338,9 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
               <h2 className="text-brand-blue font-serif text-xl mb-6 text-center">Калькулятор объема выборки</h2>
 
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <EditableCalcTile
-                    title="ОЖИДАЕМАЯ РАЗНИЦА (Δ)"
-                    value={delta}
-                    unit="%"
-                    onChange={(val) => setDelta(val)}
-                />
-                <EditableCalcTile
-                    title="МОЩНОСТЬ (1-β)"
-                    value={power}
-                    unit="%"
-                    onChange={(val) => setPower(val)}
-                />
-                <EditableCalcTile
-                    title="УРОВЕНЬ ЗНАЧИМОСТИ (α)"
-                    value={alpha}
-                    unit=""
-                    onChange={(val) => setAlpha(val)}
-                />
+                <EditableCalcTile title="ОЖИДАЕМАЯ РАЗНИЦА (Δ)" value={delta} unit="%" onChange={setDelta} />
+                <EditableCalcTile title="МОЩНОСТЬ (1-β)" value={power} unit="%" onChange={setPower} />
+                <EditableCalcTile title="УРОВЕНЬ ЗНАЧИМОСТИ (α)" value={alpha} unit="" onChange={setAlpha} />
                 <EditableCalcTile
                     title="ВНУТРИСУБЪЕКТНЫЙ CV"
                     value={cvIntra}
@@ -423,7 +444,10 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
             </span>
             </div>
 
-            <div className="flex-1 flex flex-col gap-3 mb-6 overflow-y-auto pr-2" style={{ maxHeight: '800px' }}>
+            <div
+                className="flex-1 flex flex-col gap-3 mb-6 overflow-y-auto pr-2"
+                style={{ maxHeight: '800px' }}
+            >
               {searchStore.articles.map((article) => {
                 const visible = isArticleVisible(article);
                 return (
