@@ -271,7 +271,7 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
           </div>
 
           {/* Рекомендуемый дизайн — теперь в той же сетке */}
-          <div>
+          <div className="mb-10">
             <section className="bg-green-50 border border-green-200 rounded-2xl p-5 shadow-md h-full flex flex-col justify-between">
               <div>
                 <h2 className="text-green-800 font-medium text-sm uppercase tracking-wider mb-1">Рекомендуемый дизайн</h2>
@@ -466,42 +466,69 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
             </div>
 
             <div className="flex-1 flex flex-col gap-3 mb-6 overflow-y-auto pr-2" style={{ maxHeight: '800px' }}>
-              {searchStore.articles.map((article) => {
-                const visible = isArticleVisible(article);
-                return (
-                    <div
-                        key={article.id}
-                        className={`bg-white rounded-xl p-4 border transition-all duration-300 cursor-pointer hover:shadow-md ${
-                            visible
-                                ? selectedParams.length > 0
-                                    ? 'border-blue-200 shadow-sm'
-                                    : 'border-slate-200 shadow-sm'
-                                : 'opacity-40 border-slate-100 grayscale-[50%]'
-                        }`}
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-bold text-slate-900">{article.authors}</h4>
-                        <ChevronDown size={16} className="text-slate-400" />
-                      </div>
-                      <p className="text-slate-500 text-sm italic mb-3">{article.journal}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {article.params.map((p) => (
-                            <span
-                                key={p}
-                                className={`text-xs px-2 py-1 rounded border ${
-                                    selectedParams.includes(p)
-                                        ? 'bg-blue-50 border-blue-200 text-brand-blue font-medium'
-                                        : 'bg-slate-50 border-slate-200 text-slate-600'
-                                }`}
-                            >
-                        {p}
-                      </span>
-                        ))}
-                      </div>
-                      <p className="text-xs text-slate-600 mt-3 pt-3 border-t border-slate-100">{article.dataString}</p>
-                    </div>
-                );
-              })}
+              {(() => {
+                const grouped = searchStore.articles.reduce((map, article) => {
+                  if (!map.has(article.id)) {
+                    map.set(article.id, { ...article, params: new Set(article.params), count: 1 });
+                  } else {
+                    const existing = map.get(article.id)!;
+                    article.params.forEach(p => existing.params.add(p));
+                    existing.count += 1;
+                  }
+                  return map;
+                }, new Map<string, any>());
+
+                return Array.from(grouped.values()).map((article, index) => {
+                  const visible = selectedParams.length === 0 ||
+                      selectedParams.every(param => article.params.has(param));
+
+                  return (
+                      <a
+                          key={article.id}
+                          href={`https://pubmed.ncbi.nlm.nih.gov/${article.id}/`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`block transition-all duration-300 ${
+                              visible
+                                  ? selectedParams.length > 0
+                                      ? 'border-blue-200 shadow-sm'
+                                      : 'border-slate-200 shadow-sm'
+                                  : 'opacity-40 border-slate-100 grayscale-[50%]'
+                          }`}
+                      >
+                        <div className="bg-white rounded-xl p-4 border cursor-pointer hover:shadow-md">
+                          <div className="flex justify-between items-start mb-1">
+                            <div>
+    <span className="inline-block bg-gray-200 text-gray-800 text-xs font-bold px-2 py-1 rounded mr-2">
+      №{index + 1}
+    </span>
+                              <h4 className="font-bold text-slate-900 inline">{article.authors}</h4>
+                            </div>
+                            <span className="text-xs text-slate-500 self-center">PMID: {article.id}</span>
+                          </div>
+                          <p className="text-slate-500 text-sm italic mb-3">{article.journal}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {Array.from(article.params).map((p: Parameter) => (
+                                <span
+                                    key={p}
+                                    className={`text-xs px-2 py-1 rounded border ${
+                                        selectedParams.includes(p)
+                                            ? 'bg-blue-50 border-blue-200 text-brand-blue font-medium'
+                                            : 'bg-slate-50 border-slate-200 text-slate-600'
+                                    }`}
+                                >
+                  {p}
+                </span>
+                            ))}
+                          </div>
+                          <p className="text-xs text-slate-600 mt-3 pt-3 border-t border-slate-100">
+                            Найдено значений: {article.count}
+                          </p>
+                        </div>
+                      </a>
+                  );
+                });
+              })()}
             </div>
 
             <div className="mt-auto pt-4">

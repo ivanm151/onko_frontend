@@ -143,14 +143,13 @@ export class SearchStore {
     }
 
     setResult(data: any) {
-        // Устанавливаем имя препарата, если ещё не установлено
+        // Устанавливаем имя препарата
         if (!this.drugName && data.inn_en) {
             this.drugName = data.inn_en;
         } else {
             this.drugName = this.drugName || 'Неизвестный препарат';
         }
 
-        // Очищаем параметры
         const newParameters = {
             cmax: null as number | null,
             auc: null as number | null,
@@ -158,7 +157,6 @@ export class SearchStore {
             cv_intra: null as number | null,
         };
 
-        // Маппинг параметров
         const paramKeyMap: Record<string, keyof typeof newParameters> = {
             cmax: 'cmax',
             auc: 'auc',
@@ -170,7 +168,6 @@ export class SearchStore {
             'cvintra': 'cv_intra',
         };
 
-        // Собираем статьи и усреднённые значения
         const articles: Array<{
             id: string;
             authors: string;
@@ -185,13 +182,11 @@ export class SearchStore {
             const mappedKey = paramKeyMap[key];
 
             if (mappedKey && !isNaN(value)) {
-                // Обновляем параметр, если это первый попавшийся или более надёжный
                 if (newParameters[mappedKey] === null || p.is_reliable) {
                     newParameters[mappedKey] = value;
                 }
             }
 
-            // Создаём статью
             const paramShort = key === 'cmax' ? 'Cmax' :
                 key === 'auc' ? 'AUC' :
                     key === 't½' || key === 't1/2' || key === 't_half' ? 'T1/2' :
@@ -199,22 +194,27 @@ export class SearchStore {
 
             if (!paramShort) return;
 
+            // Извлекаем PMID из source
+            const pmidMatch = p.source?.match(/PMID[:\s]*(\d+)/i);
+            const pmid = pmidMatch ? pmidMatch[1] : String(i + 1); // fallback к номеру
+
+            // Очищаем source от PMID
+            const cleanSource = p.source ? p.source.replace(/\s*[,;]?\s*PMID[:\s]*\d+/i, '').trim() : 'Источник';
+
             articles.push({
-                id: String(i + 1),
-                authors: p.source || 'Источник',
+                id: pmid, // ← Теперь id = настоящий PMID
+                authors: cleanSource,
                 journal: 'Клиническое исследование',
                 params: [paramShort as Parameter],
                 dataString: `${p.parameter} ${p.value} ${p.unit}`,
             });
         });
 
-        // Устанавливаем CVintra по умолчанию, если не найдено
         newParameters.cv_intra = newParameters.cv_intra ?? 25;
 
         this.parameters = newParameters;
         this.articles = articles;
 
-        // Устанавливаем препараты
         if (!this.referenceDrug) this.referenceDrug = this.drugName;
         if (!this.testDrug) this.testDrug = this.drugName;
 
