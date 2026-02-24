@@ -286,6 +286,7 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
               </button>
             </section>
           </div>
+
         </div>
 
 
@@ -459,7 +460,7 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
 
           <div className="flex flex-col h-full">
             <div className="flex justify-between items-end mb-4">
-              <h2 className="text-brand-blue font-medium text-lg">Все источники</h2>
+              <h2 className="text-brand-blue font-medium text-lg">Все статьи</h2>
               <span className="bg-slate-200 text-slate-600 text-xs font-bold px-2 py-1 rounded-full">
               {searchStore.articles.length} статей
             </span>

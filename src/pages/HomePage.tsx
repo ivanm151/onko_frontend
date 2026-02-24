@@ -173,7 +173,7 @@ export default observer(function HomePage({ onSearch }: { onSearch: () => void }
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
           {/* File Upload */}
           <div className="flex flex-col">
-            <h3 className="text-brand-blue font-medium mb-4 uppercase text-sm tracking-wider">Или загрузите файл с данными</h3>
+            <h3 className="text-brand-blue font-bold mb-4 uppercase text-md tracking-wider">Загрузите статью с информацией о веществе</h3>
             <div
                 className="flex-1 border-2 border-dashed border-brand-blue/30 rounded-3xl bg-white flex flex-col items-center justify-center p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer min-h-[300px]"
                 onDragOver={(e) => e.preventDefault()}
