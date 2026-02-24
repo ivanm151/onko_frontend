@@ -1,4 +1,4 @@
-import { searchService } from '../services/drugService';
+import { searchService, DesignResult } from '../services/drugService';
 import { makeAutoObservable } from 'mobx';
 
 type Parameter = 'Cmax' | 'AUC' | 'T1/2' | 'CVintra';
@@ -37,8 +37,34 @@ export class SearchStore {
     dosage: string = '';
     form: string = '';
 
+    // Новое: результат расчёта дизайна
+    designResult: DesignResult | null = null;
+
+    // Добавьте в начало store
+    dropoutRate = 20;
+    screenFail = 12;
+    power = 80;
+    alpha = 0.05;
+
+    // Флаг состояния
+    designStatus: 'idle' | 'calculating' | 'completed' | 'failed' = 'idle';
+
+
     constructor() {
         makeAutoObservable(this);
+    }
+
+    setDesignCalculating() {
+        this.designStatus = 'calculating';
+    }
+
+    setDesignCompleted(result: DesignResult) {
+        this.designResult = result;
+        this.designStatus = 'completed';
+    }
+
+    setDesignFailed() {
+        this.designStatus = 'failed';
     }
 
     setSearching() {
@@ -326,6 +352,51 @@ export class SearchStore {
             this.setFailed();
             console.error('PDF upload failed:', error);
         }
+    }
+
+    // Новый метод: запуск расчёта дизайна
+    async calculateStudyDesign() {
+        if (!this.project_id || this.designStatus === 'calculating') return;
+
+        this.setDesignCalculating();
+
+        try {
+            const response = await searchService.calculateDesign({
+                cv_intra: this.parameters.cv_intra ?? 25,
+                t_half: this.parameters.t_half ?? undefined,
+                power: this.power / 100, // если у вас power в %
+                alpha: this.alpha,
+                dropout_rate: this.dropoutRate,
+                screen_fail_rate: this.screenFail,
+                project_id: this.project_id,
+            });
+
+            this.setDesignCompleted(response);
+        } catch (error) {
+            console.error('❌ Не удалось рассчитать дизайн:', error);
+            this.setDesignFailed();
+        }
+    }
+
+    // Метод для поллинга (если бэкенд использует асинхронный расчёт)
+    async pollDesignResult(projectId: string, maxRetries = 10) {
+        let attempts = 0;
+        const poll = async (): Promise<DesignResult | null> => {
+            attempts++;
+            try {
+                const result = await searchService.getDesignResult(projectId);
+                this.setDesignCompleted(result);
+                return result;
+            } catch (error: any) {
+                if (attempts < maxRetries) {
+                    setTimeout(poll, 1000);
+                } else {
+                    this.setDesignFailed();
+                }
+                return null;
+            }
+        };
+        return poll();
     }
 }
 

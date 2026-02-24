@@ -1,3 +1,33 @@
+interface DesignCalculateRequest {
+    cv_intra: number;
+    tmax?: number;
+    t_half?: number;
+    power?: number;
+    alpha?: number;
+    dropout_rate?: number;
+    screen_fail_rate?: number;
+    project_id?: string;
+    desired_design?: string;
+}
+
+export interface DesignResult {
+    sample_size: number;
+    recruitment_size: number;
+    design_type: string;
+    cv_intra: number;
+    power: number;
+    alpha: number;
+    dropout_rate: number;
+    screen_fail_rate: number;
+    washout_days: number;
+    critical_parameters: {
+        cv_intra: number;
+        tmax: number;
+        t_half: number;
+    };
+    design_explanation: string;
+}
+
 interface SearchStartRequest {
     inn_en: string;
     inn_ru: string;
@@ -190,6 +220,54 @@ export const searchService = {
             return result;
         } catch (error) {
             console.error('🚨 Ошибка при загрузке PDF:', error);
+            throw error;
+        }
+    },
+
+    async calculateDesign(data: DesignCalculateRequest): Promise<DesignResult> {
+        console.log('📐 Расчёт дизайна:', data);
+        try {
+            const response = await fetch(`${API_BASE}/design/calculate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Ошибка расчёта дизайна:', response.status, errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
+            const result: DesignResult = await response.json();
+            console.log('✅ Дизайн рассчитан:', result);
+            return result;
+        } catch (error) {
+            console.error('🚨 Ошибка при расчёте дизайна:', error);
+            throw error;
+        }
+    },
+
+    async getDesignResult(projectId: string): Promise<DesignResult> {
+        console.log('🔄 Получение результата дизайна:', projectId);
+        try {
+            const response = await fetch(`${API_BASE}/design/${projectId}`, {
+                method: 'GET',
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Ошибка получения дизайна:', response.status, errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
+            const result: DesignResult = await response.json();
+            console.log('✅ Результат дизайна:', result);
+            return result;
+        } catch (error) {
+            console.error('🚨 Ошибка при получении дизайна:', error);
             throw error;
         }
     },

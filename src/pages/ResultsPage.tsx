@@ -270,20 +270,41 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
             />
           </div>
 
-          {/* Рекомендуемый дизайн — теперь в той же сетке */}
+          {/* Рекомендуемый дизайн */}
           <div className="mb-10">
             <section className="bg-green-50 border border-green-200 rounded-2xl p-5 shadow-md h-full flex flex-col justify-between">
               <div>
                 <h2 className="text-green-800 font-medium text-sm uppercase tracking-wider mb-1">Рекомендуемый дизайн</h2>
-                <h3 className="text-2xl font-serif text-green-900 mb-3">2×2 кроссовер</h3>
-                <p className="text-green-700 text-sm leading-relaxed mb-4">
-                  Низкая вариабельность (CV &lt; 30%) позволяет использовать классический двухпериодный кроссовер.
-                  Рекомендован EMA Guideline on the Investigation of Bioequivalence (2010).
-                </p>
+
+                {searchStore.designStatus === 'completed' && searchStore.designResult ? (
+                    <>
+                      <h3 className="text-2xl font-serif text-green-900 mb-3">
+                        {searchStore.designResult.design_type}
+                      </h3>
+                      <p className="text-green-700 text-sm leading-relaxed mb-4">
+                        {searchStore.designResult.design_explanation}
+                      </p>
+                      <div className="text-xs text-green-800 space-y-1">
+                        <div><strong>Период вымывания:</strong> {searchStore.designResult.washout_days} дней</div>
+                        <div><strong>Объём набора:</strong> {searchStore.designResult.recruitment_size} участников</div>
+                      </div>
+                    </>
+                ) : searchStore.designStatus === 'calculating' ? (
+                    <div className="animate-pulse">
+                      <div className="h-8 bg-green-200 rounded w-3/4 mb-3"></div>
+                      <div className="h-4 bg-green-200 rounded w-full mb-2"></div>
+                      <div className="h-4 bg-green-200 rounded w-5/6"></div>
+                    </div>
+                ) : (
+                    <div>
+                      <h3 className="text-2xl font-serif text-green-900 mb-3">Ожидание расчёта...</h3>
+                      <p className="text-green-700 text-sm">
+                        Нажмите кнопку «Рассчитать дизайн исследования», чтобы получить рекомендации.
+                      </p>
+                    </div>
+                )}
               </div>
-              <button className="text-green-700 font-medium text-sm hover:underline flex items-center gap-1">
-                Подробнее о дизайне &rarr;
-              </button>
+
             </section>
           </div>
 
@@ -440,6 +461,18 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
                       className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-blue"
                   />
                 </div>
+              </div>
+              {/* Кнопка "Рассчитать дизайн" */}
+              <div className="mt-6">
+                <button
+                    onClick={() => searchStore.calculateStudyDesign()}
+                    disabled={searchStore.designStatus === 'calculating'}
+                    className="w-full h-12 bg-green-600 hover:bg-green-700 disabled:opacity-70 text-white font-medium rounded-lg transition-colors"
+                >
+                  {searchStore.designStatus === 'calculating'
+                      ? 'Расчёт...'
+                      : 'Рассчитать дизайн исследования'}
+                </button>
               </div>
             </section>
 
