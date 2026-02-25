@@ -13,9 +13,14 @@ export default observer(function HomePage({ onSearch }: { onSearch: () => void }
 
   // Пример вспомогательных веществ
   const excipientsList = [
-    'aspirin',
-    'paracetamol',
-    'ibuprofen',
+    'sucrose',
+    'lactose',
+    'starch',
+    'MCC',
+    'glycerin',
+    'stabilizer',
+    'diluent',
+    'binder',
   ];
 
   const toggleExcipient = (excipient: string) => {
@@ -93,7 +98,7 @@ export default observer(function HomePage({ onSearch }: { onSearch: () => void }
             <Search className="text-slate-400 mr-3" size={24} />
             <input
                 type="text"
-                placeholder="Введите МНН препарата (например, ибупрофен...)"
+                placeholder="Введите МНН препарата на английском языке (например, ibuprofen)"
                 value={innEn}
                 onChange={(e) => setInnEn(e.target.value)}
                 className="w-full h-14 text-lg outline-none bg-transparent"
@@ -280,25 +285,7 @@ export default observer(function HomePage({ onSearch }: { onSearch: () => void }
                   step="10"
                   value={excipientMatch}
                   onChange={(e) => setExcipientMatch(Number(e.target.value))}
-                  className="w-full h-2 bg-gradient-to-r from-red-200 via-yellow-200 to-green-500 rounded-lg appearance-none cursor-pointer accent-brand-green"
-                  style={{
-                    background: `
-                  linear-gradient(
-                    to right,
-                    #fecaca 0%,
-                    #fed7aa 10%,
-                    #fde68a 20%,
-                    #fae8a5 30%,
-                    #facc15 40%,
-                    #fde047 50%,
-                    #bbf7d0 60%,
-                    #86efac 70%,
-                    #4ade80 80%,
-                    #22c55e 90%,
-                    #16a34a 100%
-                  )
-                `,
-                  }}
+                  className="w-full h-2 bg-gradient-to-r from-red-500 via-yellow-400 to-green-500 rounded-lg appearance-none cursor-pointer accent-slate-600"
               />
               <div className="flex justify-between text-xs text-slate-400 mt-2">
                 {Array.from({ length: 11 }, (_, i) => (
@@ -310,16 +297,6 @@ export default observer(function HomePage({ onSearch }: { onSearch: () => void }
             <button className="w-full py-3 bg-transparent border-2 border-brand-blue text-brand-blue rounded-lg font-medium hover:bg-blue-50 transition-colors">
               Применить фильтры
             </button>
-          </div>
-        </div>
-
-        {/* Popular Drugs */}
-        <div className="w-full mt-16 mb-8">
-          <h3 className="text-2xl font-serif text-brand-blue mb-6">Популярные препараты</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <DrugCard name="Парацетамол" cv="15%" design="2×2 кроссовер" desc="Низкая вариабельность, стандартный дизайн" />
-            <DrugCard name="Амоксициллин" cv="22%" design="2×2 кроссовер" desc="Умеренная вариабельность, требуется контроль Tmax" />
-            <DrugCard name="Эзомепразол" cv="45%" design="Репликативный" desc="Высоковариабельный препарат, масштабирование границ" />
           </div>
         </div>
       </div>
