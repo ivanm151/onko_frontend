@@ -26,6 +26,7 @@ export interface DesignResult {
         t_half: number;
     };
     design_explanation: string;
+    randomization_scheme: string;
 }
 
 interface SearchStartRequest {

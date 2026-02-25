@@ -136,11 +136,15 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
   const [dropoutRate, setDropoutRate] = useState(20);
   const [screenFail, setScreenFail] = useState(12);
 
+
   // Локальные состояния для редактируемых параметров
   const [cmax, setCmax] = useState<number | null>(searchStore.parameters.cmax);
   const [auc, setAuc] = useState<number | null>(searchStore.parameters.auc);
   const [tHalf, setTHalf] = useState<number | null>(searchStore.parameters.t_half);
   const [cvIntra, setCvIntra] = useState<number>(searchStore.parameters.cv_intra || 25);
+
+  // Проверка, все ли обязательные параметры заполнены
+  const areParamsComplete = cmax !== null && auc !== null && tHalf !== null && cvIntra !== null;
 
   const [delta, setDelta] = useState<number>(20);
   const [power, setPower] = useState<number>(80);
@@ -372,28 +376,6 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
               </p>
             </section>
 
-            {/* Дополнительные параметры препарата */}
-            <section>
-              <h2 className="text-brand-blue font-medium text-lg mb-4">Дополнительные параметры препарата</h2>
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-                <div className="flex justify-between py-3 border-b border-slate-100">
-                  <span className="text-slate-600">Биодоступность</span>
-                  <span className="font-medium text-slate-900">85–95%</span>
-                </div>
-                <div className="flex justify-between py-3 border-b border-slate-100">
-                  <span className="text-slate-600">Связь с белками</span>
-                  <span className="font-medium text-slate-900">99%</span>
-                </div>
-                <div className="flex justify-between py-3 border-b border-slate-100">
-                  <span className="text-slate-600">Метаболиты</span>
-                  <span className="font-medium text-slate-900">активные</span>
-                </div>
-                <div className="flex justify-between py-3">
-                  <span className="text-slate-600">Период полувыведения</span>
-                  <span className="font-medium text-slate-900">2–4 ч</span>
-                </div>
-              </div>
-            </section>
           </div>
 
 
@@ -466,12 +448,19 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
               <div className="mt-6">
                 <button
                     onClick={() => searchStore.calculateStudyDesign()}
-                    disabled={searchStore.designStatus === 'calculating'}
-                    className="w-full h-12 bg-green-600 hover:bg-green-700 disabled:opacity-70 text-white font-medium rounded-lg transition-colors"
+                    disabled={searchStore.designStatus === 'calculating' || !areParamsComplete}
+                    className={`w-full h-12 font-medium rounded-lg transition-colors ${
+                        areParamsComplete && searchStore.designStatus !== 'calculating'
+                            ? 'bg-green-600 hover:bg-green-700 text-white'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                    title={!areParamsComplete ? 'Заполните все фармакокинетические параметры' : ''}
                 >
-                  {searchStore.designStatus === 'calculating'
-                      ? 'Расчёт...'
-                      : 'Рассчитать дизайн исследования'}
+                  {!areParamsComplete
+                      ? 'Заполните параметры'
+                      : searchStore.designStatus === 'calculating'
+                          ? 'Расчёт...'
+                          : 'Рассчитать дизайн исследования'}
                 </button>
               </div>
             </section>
@@ -481,12 +470,21 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
               <h2 className="text-brand-blue font-medium text-lg mb-4">Схема рандомизации</h2>
               <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
                 <div className="border border-dashed border-slate-300 rounded-xl p-4 text-center mb-4 bg-slate-50">
-                <span className="text-slate-600 text-sm">
-                  Последовательность: <strong className="text-slate-900">A/B · B/A</strong>
-                </span>
+                  {searchStore.designStatus === 'completed' && searchStore.designResult ? (
+                      <span className="text-slate-600 text-sm">
+          Последовательность: <strong className="text-slate-900">
+            {searchStore.designResult.randomization_scheme || 'A/b · B/A'}
+          </strong>
+        </span>
+                  ) : (
+                      <span className="text-slate-600 text-sm">
+          Последовательность: <strong className="text-slate-900">A/B · b/A</strong>
+        </span>
+                  )}
                 </div>
               </div>
             </section>
+
           </div>
 
           {/* RIGHT COLUMN */}
