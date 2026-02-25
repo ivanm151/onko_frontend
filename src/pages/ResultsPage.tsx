@@ -539,19 +539,22 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
                             <span className="text-xs text-slate-500 self-center">PMID: {article.id}</span>
                           </div>
                           <p className="text-slate-500 text-sm italic mb-3">{article.journal}</p>
-                          <div className="flex flex-wrap gap-2">
-                            {Array.from(article.params).map((p: Parameter) => (
-                                <span
-                                    key={p}
-                                    className={`text-xs px-2 py-1 rounded border ${
-                                        selectedParams.includes(p)
-                                            ? 'bg-blue-50 border-blue-200 text-brand-blue font-medium'
-                                            : 'bg-slate-50 border-slate-200 text-slate-600'
-                                    }`}
-                                >
-                  {p}
-                </span>
-                            ))}
+                          <div className="flex flex-col gap-1 mt-2">
+                            {article.params.map((p) => {
+                              const isHighlighted = selectedParams.includes(p.key);
+                              return (
+                                  <span
+                                      key={p.key}
+                                      className={`text-xs px-2 py-1 rounded border whitespace-nowrap ${
+                                          isHighlighted
+                                              ? 'bg-blue-50 border-blue-200 text-brand-blue font-medium'
+                                              : 'bg-slate-50 border-slate-200 text-slate-600'
+                                      }`}
+                                  >
+        {p.key}: {p.value} {p.unit}
+      </span>
+                              );
+                            })}
                           </div>
                           <p className="text-xs text-slate-600 mt-3 pt-3 border-t border-slate-100">
                             Найдено значений: {article.count}

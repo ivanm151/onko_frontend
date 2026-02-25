@@ -29,7 +29,7 @@ export class SearchStore {
         id: string;
         authors: string;
         journal: string;
-        params: Parameter[];
+        params: Array<{ key: Parameter; value: string; unit: string }>;
         dataString: string;
     }> = [];
 
@@ -169,7 +169,6 @@ export class SearchStore {
     }
 
     setResult(data: any) {
-        // Устанавливаем имя препарата
         if (!this.drugName && data.inn_en) {
             this.drugName = data.inn_en;
         } else {
@@ -198,18 +197,21 @@ export class SearchStore {
             id: string;
             authors: string;
             journal: string;
-            params: Parameter[];
+            params: Array<{ key: Parameter; value: string; unit: string }>;
             dataString: string;
         }> = [];
 
+        const seenIds = new Map<string, typeof articles[number]>(); // Группировка по PMID
+
         data.parameters?.forEach((p: any, i: number) => {
             const key = p.parameter.toLowerCase();
-            const value = parseFloat(p.value);
+            const value = p.value;
+            const unit = p.unit || '';
             const mappedKey = paramKeyMap[key];
 
-            if (mappedKey && !isNaN(value)) {
+            if (mappedKey && !isNaN(parseFloat(value))) {
                 if (newParameters[mappedKey] === null || p.is_reliable) {
-                    newParameters[mappedKey] = value;
+                    newParameters[mappedKey] = parseFloat(value);
                 }
             }
 
@@ -220,26 +222,36 @@ export class SearchStore {
 
             if (!paramShort) return;
 
-            // Извлекаем PMID из source
             const pmidMatch = p.source?.match(/PMID[:\s]*(\d+)/i);
-            const pmid = pmidMatch ? pmidMatch[1] : String(i + 1); // fallback к номеру
-
-            // Очищаем source от PMID
+            const pmid = pmidMatch ? pmidMatch[1] : String(i + 1);
             const cleanSource = p.source ? p.source.replace(/\s*[,;]?\s*PMID[:\s]*\d+/i, '').trim() : 'Источник';
 
-            articles.push({
-                id: pmid, // ← Теперь id = настоящий PMID
-                authors: cleanSource,
-                journal: 'Клиническое исследование',
-                params: [paramShort as Parameter],
-                dataString: `${p.parameter} ${p.value} ${p.unit}`,
+            if (!seenIds.has(pmid)) {
+                seenIds.set(pmid, {
+                    id: pmid,
+                    authors: cleanSource,
+                    journal: 'Клиническое исследование',
+                    params: [],
+                    dataString: '',
+                });
+            }
+
+            const article = seenIds.get(pmid)!;
+            article.params.push({
+                key: paramShort as Parameter,
+                value,
+                unit,
             });
         });
 
-        newParameters.cv_intra = newParameters.cv_intra ?? 25;
+        // Преобразуем Map в массив и формируем dataString
+        this.articles = Array.from(seenIds.values()).map(article => ({
+            ...article,
+            dataString: article.params.map(p => `${p.key}: ${p.value} ${p.unit}`).join(', ')
+        }));
 
+        newParameters.cv_intra = newParameters.cv_intra ?? 25;
         this.parameters = newParameters;
-        this.articles = articles;
 
         if (!this.referenceDrug) this.referenceDrug = this.drugName;
         if (!this.testDrug) this.testDrug = this.drugName;
