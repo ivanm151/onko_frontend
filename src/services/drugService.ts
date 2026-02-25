@@ -76,7 +76,7 @@ interface DownloadReportResponse {
     // В данном случае — предположим, что возвращает DOCX напрямую
 }
 
-const API_BASE = 'http://141.98.189.19:8000/api/v1';
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || '/api/v1';
 
 export const searchService = {
     async startSearch(data: SearchStartRequest): Promise<SearchStartResponse> {
