@@ -76,7 +76,7 @@ interface DownloadReportResponse {
     // Сервер может вернуть URL или бинарный файл
     // В данном случае — предположим, что возвращает DOCX напрямую
 }
-
+//const API_BASE = 'https://prodready.pro/api/v1'
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || '/api/v1';
 
 export const searchService = {

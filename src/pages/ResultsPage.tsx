@@ -500,11 +500,19 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
             <div className="flex-1 flex flex-col gap-3 mb-6 overflow-y-auto pr-2" style={{ maxHeight: '800px' }}>
               {(() => {
                 const grouped = searchStore.articles.reduce((map, article) => {
-                  if (!map.has(article.id)) {
-                    map.set(article.id, { ...article, params: new Set(article.params), count: 1 });
+                  const existing = map.get(article.id);
+                  if (!existing) {
+                    // Первое вхождение статьи
+                    map.set(article.id, { ...article, count: 1 });
                   } else {
-                    const existing = map.get(article.id)!;
-                    article.params.forEach(p => existing.params.add(p));
+                    // Уже есть — объединяем параметры
+                    const paramMap = new Map(existing.params.map((p: any) => [p.key, p]));
+                    article.params.forEach((p) => {
+                      if (!paramMap.has(p.key)) {
+                        paramMap.set(p.key, p);
+                      }
+                    });
+                    existing.params = Array.from(paramMap.values());
                     existing.count += 1;
                   }
                   return map;
