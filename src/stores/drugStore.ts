@@ -130,7 +130,7 @@ export class SearchStore {
     }
 
     async pollDownloadReport(projectId: string) {
-        const MAX_RETRIES = 30;
+        const MAX_RETRIES = 180;
         let attempts = 0;
 
         const poll = async () => {
@@ -278,7 +278,7 @@ export class SearchStore {
     }
 
     async pollStatus(projectId: string) {
-        const MAX_RETRIES = 60;
+        const MAX_RETRIES = 180;
         let attempts = 0;
 
         const poll = async () => {
@@ -379,7 +379,7 @@ export class SearchStore {
     }
 
     // Метод для поллинга (если бэкенд использует асинхронный расчёт)
-    async pollDesignResult(projectId: string, maxRetries = 10) {
+    async pollDesignResult(projectId: string, maxRetries = 60) {
         let attempts = 0;
         const poll = async (): Promise<DesignResult | null> => {
             attempts++;
