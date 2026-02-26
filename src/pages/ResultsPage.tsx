@@ -133,26 +133,24 @@ function EditableCalcTile({
 
 export default observer(function ResultsPage({ onBack }: { onBack: () => void }) {
   const [selectedParams, setSelectedParams] = useState<Parameter[]>([]);
-  const [dropoutRate, setDropoutRate] = useState(20);
-  const [screenFail, setScreenFail] = useState(12);
 
-
-  // Локальные состояния для редактируемых параметров
+  // Локальные состояния
   const [cmax, setCmax] = useState<number | null>(searchStore.parameters.cmax);
   const [auc, setAuc] = useState<number | null>(searchStore.parameters.auc);
   const [tHalf, setTHalf] = useState<number | null>(searchStore.parameters.t_half);
   const [cvIntra, setCvIntra] = useState<number>(searchStore.parameters.cv_intra || 25);
 
-  // Проверка, все ли обязательные параметры заполнены
-  const areParamsComplete = cmax !== null && auc !== null && tHalf !== null && cvIntra !== null;
+  const [dropoutRate, setDropoutRate] = useState(searchStore.dropoutRate);
+  const [screenFail, setScreenFail] = useState(searchStore.screenFail);
+  const [power, setPower] = useState(searchStore.power);
+  const [alpha, setAlpha] = useState(searchStore.alpha);
 
-  const [delta, setDelta] = useState<number>(20);
-  const [power, setPower] = useState<number>(80);
-  const [alpha, setAlpha] = useState<number>(0.05);
+  const areParamsComplete = cmax !== null && auc !== null && tHalf !== null && cvIntra !== null;
 
   const [testDrug, setTestDrug] = useState(searchStore.testDrug);
   const [referenceDrug, setReferenceDrug] = useState(searchStore.referenceDrug);
 
+  // Синхронизация: когда меняются параметры из store → обновляем локальные
   useEffect(() => {
     setCmax(searchStore.parameters.cmax);
     setAuc(searchStore.parameters.auc);
@@ -174,20 +172,37 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
     searchStore.referenceDrug,
   ]);
 
+  // ✅ НОВОЕ: Синхронизация: когда меняются локальные → обновляем store
+  useEffect(() => {
+    searchStore.dropoutRate = dropoutRate;
+  }, [dropoutRate]);
+
+  useEffect(() => {
+    searchStore.screenFail = screenFail;
+  }, [screenFail]);
+
+  useEffect(() => {
+    searchStore.power = power;
+  }, [power]);
+
+  useEffect(() => {
+    searchStore.alpha = alpha;
+  }, [alpha]);
+
+  useEffect(() => {
+    searchStore.setParam('cv_intra', cvIntra);
+  }, [cvIntra]);
+
   const toggleParam = (param: Parameter) => {
     setSelectedParams((prev) =>
         prev.includes(param) ? prev.filter((p) => p !== param) : [...prev, param]
     );
   };
 
-  const isArticleVisible = (article: any) => {
-    if (selectedParams.length === 0) return true;
-    return selectedParams.every((param) => article.params.includes(param));
-  };
-
   const baseVolume = 30;
   const withDropout = Math.ceil(baseVolume / (1 - dropoutRate / 100));
   const withScreenFail = Math.ceil(withDropout / (1 - screenFail / 100));
+
 
   if (searchStore.status === 'idle' || searchStore.status === 'searching') {
     return (
@@ -385,17 +400,17 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
               <h2 className="text-brand-blue font-serif text-xl mb-6 text-center">Калькулятор объема выборки</h2>
 
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <EditableCalcTile title="ОЖИДАЕМАЯ РАЗНИЦА (Δ)" value={delta} unit="%" onChange={setDelta} />
-                <EditableCalcTile title="МОЩНОСТЬ (1-β)" value={power} unit="%" onChange={setPower} />
-                <EditableCalcTile title="УРОВЕНЬ ЗНАЧИМОСТИ (α)" value={alpha} unit="" onChange={setAlpha} />
                 <EditableCalcTile
-                    title="ВНУТРИСУБЪЕКТНЫЙ CV"
-                    value={cvIntra}
+                    title="МОЩНОСТЬ (1-β)"
+                    value={power}
                     unit="%"
-                    onChange={(val) => {
-                      setCvIntra(val);
-                      searchStore.setParam('cv_intra', val);
-                    }}
+                    onChange={setPower}
+                />
+                <EditableCalcTile
+                    title="УРОВЕНЬ ЗНАЧИМОСТИ (α)"
+                    value={alpha}
+                    unit=""
+                    onChange={setAlpha}
                 />
               </div>
 
@@ -429,6 +444,7 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
                       className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-blue"
                   />
                 </div>
+                {/* Screen fail */}
                 <div>
                   <div className="flex justify-between text-sm font-medium text-brand-blue mb-2 uppercase tracking-wider">
                     <span>Screen fail</span>

@@ -376,10 +376,10 @@ export class SearchStore {
             const response = await searchService.calculateDesign({
                 cv_intra: this.parameters.cv_intra ?? 25,
                 t_half: this.parameters.t_half ?? undefined,
-                power: this.power / 100, // если у вас power в %
-                alpha: this.alpha,
-                dropout_rate: this.dropoutRate,
-                screen_fail_rate: this.screenFail,
+                power: this.power / 100,           // 80 → 0.8
+                alpha: this.alpha,                  // 0.05
+                dropout_rate: this.dropoutRate,     // 20
+                screen_fail_rate: this.screenFail,  // 12
                 project_id: this.project_id,
             });
 
