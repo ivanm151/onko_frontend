@@ -502,10 +502,8 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
                 const grouped = searchStore.articles.reduce((map, article) => {
                   const existing = map.get(article.id);
                   if (!existing) {
-                    // Первое вхождение статьи
                     map.set(article.id, { ...article, count: 1 });
                   } else {
-                    // Уже есть — объединяем параметры
                     const paramMap = new Map(existing.params.map((p: any) => [p.key, p]));
                     article.params.forEach((p) => {
                       if (!paramMap.has(p.key)) {
@@ -519,8 +517,9 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
                 }, new Map<string, any>());
 
                 return Array.from(grouped.values()).map((article, index) => {
+                  // ✅ Исправленная строка:
                   const visible = selectedParams.length === 0 ||
-                      selectedParams.every(param => article.params.has(param));
+                      selectedParams.every(param => article.params.some((p: any) => p.key === param));
 
                   return (
                       <a
@@ -539,14 +538,16 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
                         <div className="bg-white rounded-xl p-4 border cursor-pointer hover:shadow-md">
                           <div className="flex justify-between items-start mb-1">
                             <div>
-    <span className="inline-block bg-gray-200 text-gray-800 text-xs font-bold px-2 py-1 rounded mr-2">
-      №{index + 1}
-    </span>
+              <span className="inline-block bg-gray-200 text-gray-800 text-xs font-bold px-2 py-1 rounded mr-2">
+                №{index + 1}
+              </span>
                               <h4 className="font-bold text-slate-900 inline">{article.authors}</h4>
                             </div>
                             <span className="text-xs text-slate-500 self-center">PMID: {article.id}</span>
                           </div>
                           <p className="text-slate-500 text-sm italic mb-3">{article.journal}</p>
+
+                          {/* Отображение параметров с значениями */}
                           <div className="flex flex-col gap-1 mt-2">
                             {article.params.map((p) => {
                               const isHighlighted = selectedParams.includes(p.key);
@@ -559,11 +560,12 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
                                               : 'bg-slate-50 border-slate-200 text-slate-600'
                                       }`}
                                   >
-        {p.key}: {p.value} {p.unit}
-      </span>
+                  {p.key}: {p.value} {p.unit}
+                </span>
                               );
                             })}
                           </div>
+
                           <p className="text-xs text-slate-600 mt-3 pt-3 border-t border-slate-100">
                             Найдено значений: {article.count}
                           </p>
