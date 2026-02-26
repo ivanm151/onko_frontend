@@ -199,7 +199,7 @@ export default observer(function ResultsPage({ onBack }: { onBack: () => void })
     );
   };
 
-  const baseVolume = 30;
+  const baseVolume = searchStore.designResult?.sample_size || 30; // fallback
   const withDropout = Math.ceil(baseVolume / (1 - dropoutRate / 100));
   const withScreenFail = Math.ceil(withDropout / (1 - screenFail / 100));
 
