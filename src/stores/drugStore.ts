@@ -118,33 +118,38 @@ export class SearchStore {
             return;
         }
 
-        this.setGenerating();
+        this.setGenerating(); // reportStatus = 'generating'
 
         try {
+            // Только запускаем генерацию — НЕ скачиваем!
             await searchService.generateReport(this.project_id);
-            this.pollDownloadReport(this.project_id);
+
+            // Начинаем поллинг скачивания
+            this.pollReportDownload(this.project_id);
         } catch (error) {
             this.setReportFailed();
-            console.error('Failed to start report generation:', error);
+            console.error('❌ Не удалось запустить генерацию отчёта:', error);
         }
     }
 
-    async pollDownloadReport(projectId: string) {
-        const MAX_RETRIES = 180;
+// Новый метод: поллинг скачивания отчёта
+    async pollReportDownload(projectId: string) {
+        const MAX_RETRIES = 180; // 180 секунд = 3 минуты
         let attempts = 0;
 
         const poll = async () => {
             attempts++;
-            console.log(`🔁 Polling download attempt ${attempts}/${MAX_RETRIES}`);
+            console.log(`🔁 Поллинг отчёта: попытка ${attempts}/${MAX_RETRIES}`);
 
             if (attempts > MAX_RETRIES) {
                 this.setReportFailed();
-                console.error('🛑 Report download polling timed out');
+                console.error('🛑 Таймаут ожидания отчёта');
                 return;
             }
 
             try {
                 const blob = await searchService.downloadReport(projectId);
+                // Успешно получен → сохраняем и переходим в ready
                 this.setReportReady(blob);
 
                 // Автоматически скачиваем
@@ -158,9 +163,11 @@ export class SearchStore {
                 document.body.removeChild(a);
             } catch (error: any) {
                 if (error.message === 'not_ready') {
+                    // Продолжаем поллинг
                     setTimeout(poll, 1000);
                 } else {
                     this.setReportFailed();
+                    console.error('🚨 Ошибка при поллинге отчёта:', error);
                 }
             }
         };
@@ -366,7 +373,6 @@ export class SearchStore {
         }
     }
 
-    // Новый метод: запуск расчёта дизайна
     async calculateStudyDesign() {
         if (!this.project_id || this.designStatus === 'calculating') return;
 
@@ -376,11 +382,13 @@ export class SearchStore {
             const response = await searchService.calculateDesign({
                 cv_intra: this.parameters.cv_intra ?? 25,
                 t_half: this.parameters.t_half ?? undefined,
-                power: this.power / 100,           // 80 → 0.8
-                alpha: this.alpha,                  // 0.05
-                dropout_rate: this.dropoutRate,     // 20
-                screen_fail_rate: this.screenFail,  // 12
+                power: this.power / 100,
+                alpha: this.alpha,
+                dropout_rate: this.dropoutRate,
+                screen_fail_rate: this.screenFail,
                 project_id: this.project_id,
+                drug_name_t: this.testDrug || this.drugName,     // ← отправляем
+                drug_name_r: this.referenceDrug || this.drugName, // ← отправляем
             });
 
             this.setDesignCompleted(response);

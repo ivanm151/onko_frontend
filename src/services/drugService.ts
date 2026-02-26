@@ -8,6 +8,8 @@ interface DesignCalculateRequest {
     screen_fail_rate?: number;
     project_id?: string;
     desired_design?: string;
+    drug_name_t?: string;
+    drug_name_r?: string;
 }
 
 export interface DesignResult {
@@ -177,19 +179,17 @@ export const searchService = {
                 method: 'GET',
             });
 
-            // @ts-ignore
-            if (!response.status === 200) {
-                if (response.status === 404 || response.status === 400) {
-                    // Не готово
-                    throw new Error('not_ready');
-                }
+            if (response.status === 200) {
+                const blob = await response.blob();
+                return blob;
+            } else if (response.status === 404 || response.status === 400) {
+                // Отчёт ещё не готов
+                throw new Error('not_ready');
+            } else {
                 const errorText = await response.text();
                 console.error('❌ Ошибка скачивания:', response.status, errorText);
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
-
-            const blob = await response.blob();
-            return blob;
         } catch (error: any) {
             if (error.message === 'not_ready') {
                 throw error; // Для поллинга
